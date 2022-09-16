@@ -24,9 +24,21 @@ struct Provider: IntentTimelineProvider {
 
         // Generate a timeline consisting of five entries an hour apart, starting from the current date.
         let currentDate = Date()
-        for hourOffset in 0 ..< 5 {
-            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate, configuration: configuration, type: .content)
+        for secondOffset in 0 ..< 5 {
+            let type: MyType
+            if secondOffset == 0 {
+                type = .nonLoggedIn
+            } else if secondOffset == 1 {
+                type = .snapshot
+            } else if secondOffset == 2 {
+                type = .placeholder
+            } else if secondOffset == 3 {
+                type = .nonLoggedIn
+            } else {
+                type = .content
+            }
+            let entryDate = Calendar.current.date(byAdding: .second, value: secondOffset * 15, to: currentDate)!
+            let entry = SimpleEntry(date: entryDate, configuration: configuration, type: type)
             entries.append(entry)
         }
 
@@ -41,6 +53,7 @@ enum MyType {
     case placeholder
     case snapshot
     case content
+    case nonLoggedIn
 }
 struct SimpleEntry: TimelineEntry {
     let date: Date
@@ -53,16 +66,22 @@ struct FoodTrackerWidgetEntryView : View {
     @Environment(\.widgetFamily) var family
     var body: some View {
         switch entry.type {
+        case .nonLoggedIn:
+            HStack {
+                Text("Login")
+                    .privacySensitive()
+                Image(systemName: "timer")
+                    .foregroundColor(.indigo)
+            }
         case .snapshot:
             VStack {
                 Text("SNAPSHOT??")
                 Text("LAGI")
             }
         case .placeholder:
-            ZStack {
+            VStack {
                 Text("Placeholder")
             }
-            .cornerRadius(4)
             .widgetAccentable()
         case .content:
             ZStack {
