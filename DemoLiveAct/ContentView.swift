@@ -9,7 +9,7 @@ import ActivityKit
 import SwiftUI
 
 
-@available(iOS 16.0, *)
+@available(iOS 16.1, *)
 struct ContentView: View {
     let activity = MyActivity()
     var body: some View {
@@ -38,14 +38,14 @@ struct ContentView: View {
     }
 }
 
-@available(iOS 16.0, *)
+@available(iOS 16.1, *)
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
     }
 }
 
-@available(iOS 16.0, *)
+@available(iOS 16.1, *)
 class MyActivity {
     private let activityInfo = ActivityAuthorizationInfo()
     private var deliveryActivity: Activity<MyFoodAttributes>?

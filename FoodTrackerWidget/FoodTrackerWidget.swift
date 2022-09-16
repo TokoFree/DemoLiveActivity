@@ -11,11 +11,11 @@ import Intents
 
 struct Provider: IntentTimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: ConfigurationIntent())
+        SimpleEntry(date: Date(), configuration: ConfigurationIntent(), type: .placeholder)
     }
 
     func getSnapshot(for configuration: ConfigurationIntent, in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), configuration: configuration)
+        let entry = SimpleEntry(date: Date(), configuration: configuration, type: .snapshot)
         completion(entry)
     }
 
@@ -26,27 +26,64 @@ struct Provider: IntentTimelineProvider {
         let currentDate = Date()
         for hourOffset in 0 ..< 5 {
             let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate, configuration: configuration)
+            let entry = SimpleEntry(date: entryDate, configuration: configuration, type: .content)
             entries.append(entry)
         }
 
         let timeline = Timeline(entries: entries, policy: .atEnd)
-        completion(timeline)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            completion(timeline)
+        }
     }
 }
 
+enum MyType {
+    case placeholder
+    case snapshot
+    case content
+}
 struct SimpleEntry: TimelineEntry {
     let date: Date
     let configuration: ConfigurationIntent
+    let type: MyType
 }
 
 struct FoodTrackerWidgetEntryView : View {
     var entry: Provider.Entry
-
+    @Environment(\.widgetFamily) var family
     var body: some View {
-        VStack {
-            Text("Hello Widget")
-            Text(entry.date, style: .time)
+        switch entry.type {
+        case .snapshot:
+            VStack {
+                Text("SNAPSHOT??")
+                Text("LAGI")
+            }
+        case .placeholder:
+            ZStack {
+                Text("Placeholder")
+            }
+            .cornerRadius(4)
+            .widgetAccentable()
+        case .content:
+            ZStack {
+                AccessoryWidgetBackground()
+                VStack {
+                    HStack {
+                        Text("Place")
+                            .redacted(reason: .placeholder)
+                        Text("privacy")
+                            .redacted(reason: .privacy)
+                    }
+                    HStack {
+                        Text("Unredact")
+                            .unredacted()
+                        Text("Normal 2")
+                            .privacySensitive(true)
+                    }
+                }
+            }
+            .cornerRadius(4)
+            .widgetAccentable()
         }
     }
 }
@@ -60,6 +97,7 @@ struct FoodTrackerWidget: Widget {
         }
         .configurationDisplayName("My Widget")
         .description("This is an example widget.")
+        .supportedFamilies([.accessoryRectangular])
     }
 }
 
@@ -68,12 +106,5 @@ internal struct WidgetMainView: WidgetBundle {
     @WidgetBundleBuilder
     internal var body: some Widget {
         FoodTrackerWidget()
-    }
-}
-
-struct FoodTrackerWidget_Previews: PreviewProvider {
-    static var previews: some View {
-        FoodTrackerWidgetEntryView(entry: SimpleEntry(date: Date(), configuration: ConfigurationIntent()))
-            .previewContext(WidgetPreviewContext(family: .systemSmall))
     }
 }

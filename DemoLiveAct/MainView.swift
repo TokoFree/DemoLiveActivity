@@ -13,14 +13,14 @@ struct MainView: View {
         NavigationView {
             VStack {
                 Text("Hello, world!")
-                if #available(iOS 16.0, *) {
+                if #available(iOS 16.1, *) {
                     NavigationLink(destination: ContentView(), isActive: $isLiveActivityActive) {
                         Button("Go to Live activity demo page") {
                             self.isLiveActivityActive = true
                         }
                     }
                 } else {
-                    Text("You're on iOS < 16, can't use Live Activities!")
+                    Text("You're on iOS < 16.1, can't use Live Activities!")
                 }
             }
         }

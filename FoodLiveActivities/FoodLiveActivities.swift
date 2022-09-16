@@ -11,13 +11,49 @@ import SwiftUI
 @main
 struct MyFoodActivityWidget: Widget {
     var body: some WidgetConfiguration {
-        ActivityConfiguration(attributesType: MyFoodAttributes.self) { context in
+        ActivityConfiguration(for: MyFoodAttributes.self) { context in
             MyFoodActivityView(model: MyFoodModel(
                 numberOfItems: context.attributes.numberOfItems,
                 totalAmount: context.attributes.totalAmount,
                 progress: context.state.progress,
                 estimatedDeliveryTime: context.state.estimatedDeliveryTime
             ))
+        } dynamicIsland: { context in
+            DynamicIsland {
+                // Create the expanded view.
+                DynamicIslandExpandedRegion(.leading) {
+                    Text("F Leading")
+                }
+                
+                DynamicIslandExpandedRegion(.trailing) {
+                    Label {
+                        Text("F Trailing")
+                    } icon: {
+                        Image(systemName: "timer")
+                            .foregroundColor(.indigo)
+                    }
+                    .font(.title2)
+                }
+                
+                DynamicIslandExpandedRegion(.center) {
+                    Text("CENTER")
+                }
+                
+                DynamicIslandExpandedRegion(.bottom) {
+                    Button {
+                        // Deep link into your app.
+                    } label: {
+                        Label("Call driver", systemImage: "phone")
+                    }
+                    .foregroundColor(.indigo)
+                }
+            } compactLeading: {
+                Text("Leading")
+            } compactTrailing: {
+                Text("Trailing")
+            } minimal: {
+                Text("Min")
+            }
         }
     }
 }
