@@ -8,69 +8,85 @@
 import ActivityKit
 import SwiftUI
 
-
-@available(iOS 16.1, *)
 struct ContentView: View {
-    let activity = MyActivity()
+    @StateObject private var viewModel = ViewModel()
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundColor(.accentColor)
-            Text("Hello, world!")
+        VStack(spacing: 16) {
+            Text("Your Token: \(viewModel.token ?? "none")")
+            Text("State: \(viewModel.stateUpdate.debugDescription)")
+            Button("Copy Token to clipboard") {
+                viewModel.copyTokenToClipboard()
+            }
             Button("Start Live Activities") {
-                activity.request()
+                viewModel.startNewLA()
             }
             
             Button("Update Live Activities") {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                     Task {
-                        await activity.update()
+                        await viewModel.update()
                     }
                 }
             }
-            Button("End") {
+            Button("End Live Activities") {
                 Task {
-                    await activity.end()
+                    await viewModel.end()
                 }
             }
         }
     }
 }
 
-@available(iOS 16.1, *)
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
     }
 }
-
-@available(iOS 16.1, *)
-class MyActivity {
+@MainActor
+class ViewModel: ObservableObject {
+    @Published private(set) var token: String?
+    @Published private(set) var stateUpdate: MyFoodAttributes.ContentState?
+    
     private let activityInfo = ActivityAuthorizationInfo()
     private var deliveryActivity: Activity<MyFoodAttributes>?
     var progress: Float = 0
     init() {}
     
-    func request() {
+    func startNewLA() {
         guard activityInfo.areActivitiesEnabled else {
             print("It's not allowed")
             return
         }
         
         let attr = MyFoodAttributes(numberOfItems: 10, totalAmount: "350000")
-        let initial = MyFoodAttributes.ContentState(process: "Menunggu Driver", estimatedDeliveryTime: Date(timeIntervalSinceNow: 4200), progress: progress)
+        let initial = MyFoodAttributes.ContentState(process: "Menunggu Driver", estimatedDeliveryTime: Date(timeIntervalSinceNow: 2*60*60), progress: progress)
         
         do {
             let activity = try Activity<MyFoodAttributes>.request(
                 attributes: attr,
                 contentState: initial,
-                pushType: nil
+                pushType: .token
             )
-            print("<<< pushToken: \(activity.pushToken)")
             deliveryActivity = activity
+            registerToken(activity: activity)
         } catch {
             print("<<< ERROR: ", error)
+        }
+    }
+    
+    func registerToken(activity: Activity<MyFoodAttributes>) {
+        Task {
+            for await data in activity.pushTokenUpdates {
+                let token = data.map { String(format: "%02x", $0) }.joined()
+                self.token = token
+            }
+        }
+        
+        Task {
+            for await stateUpdate in activity.contentStateUpdates {
+                self.stateUpdate = stateUpdate
+            }
         }
     }
     
@@ -84,6 +100,10 @@ class MyActivity {
     }
     
     func end() async {
-        await deliveryActivity?.end(using: nil, dismissalPolicy: .immediate)
+        await deliveryActivity?.end(using: nil)
+    }
+    
+    func copyTokenToClipboard() {
+        UIPasteboard.general.string = token
     }
 }

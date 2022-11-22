@@ -16,7 +16,8 @@ struct MyFoodActivityWidget: Widget {
                 numberOfItems: context.attributes.numberOfItems,
                 totalAmount: context.attributes.totalAmount,
                 progress: context.state.progress,
-                estimatedDeliveryTime: context.state.estimatedDeliveryTime
+                estimatedDeliveryTime: context.state.estimatedDeliveryTime,
+                status: context.state.process
             ))
         } dynamicIsland: { context in
             DynamicIsland {
@@ -63,6 +64,7 @@ struct MyFoodModel {
     var totalAmount: String
     var progress: Float
     var estimatedDeliveryTime: Date
+    var status: String
 }
 
 @available(iOS 16.0, *)
@@ -74,7 +76,9 @@ struct MyFoodActivityView: View {
                 Text("Total Items: \(model.numberOfItems)")
                 Text("Rp \(model.totalAmount)")
             }
+            Text("Status: \(model.status)")
             ProgressView(value: model.progress, total: 1)
+                .transition(.move(edge: .trailing))
             Text(model.estimatedDeliveryTime, style: .timer)
         }
         .padding()
@@ -84,7 +88,7 @@ struct MyFoodActivityView: View {
 
 struct FoodLiveActivities_Previews: PreviewProvider {
     static var previews: some View {
-        MyFoodActivityView(model: MyFoodModel(numberOfItems: 2, totalAmount: "2", progress: 0.1, estimatedDeliveryTime: Date(timeIntervalSinceNow: 1_000)))
+        MyFoodActivityView(model: MyFoodModel(numberOfItems: 2, totalAmount: "2", progress: 0.1, estimatedDeliveryTime: Date(timeIntervalSinceNow: 1_000), status: "Dummy status"))
             .previewContext(WidgetPreviewContext(family: .systemMedium))
     }
 }
