@@ -22,6 +22,12 @@ struct ContentView: View {
                 viewModel.startNewLA()
             }
             
+            if #available(iOS 17.0, *) {
+                Button(intent: LAIntent()) {
+                    Text("Start via Intent")
+                }
+            }
+            
             Button("Update Live Activities") {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                     Task {
@@ -43,21 +49,25 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
     }
 }
+import CoreLocation
+
 @MainActor
-class ViewModel: ObservableObject {
+class ViewModel: NSObject, ObservableObject {
     @Published private(set) var token: String?
     @Published private(set) var stateUpdate: MyFoodAttributes.ContentState?
     
     private let activityInfo = ActivityAuthorizationInfo()
     private var deliveryActivity: Activity<MyFoodAttributes>?
     var progress: Float = 0
-    init() {}
+    override init() {}
     
     func startNewLA() {
         guard activityInfo.areActivitiesEnabled else {
             print("It's not allowed")
             return
         }
+        AppDelegate.instance.laManager.requestLocationAccessIfNeeded()
+        // check for location access.
         
         let attr = MyFoodAttributes(numberOfItems: 10, totalAmount: "350000")
         let initial = MyFoodAttributes.ContentState(process: "Menunggu Driver", estimatedDeliveryTime: Date(timeIntervalSinceNow: 2*60*60), progress: progress)
@@ -65,30 +75,29 @@ class ViewModel: ObservableObject {
         do {
             let activity = try Activity<MyFoodAttributes>.request(
                 attributes: attr,
-                contentState: initial,
-                pushType: .token
+                content: ActivityContent(state: initial, staleDate: Date(timeIntervalSinceNow: 2*60*60)),
+                pushType: nil
             )
             deliveryActivity = activity
-            registerToken(activity: activity)
         } catch {
             print("<<< ERROR: ", error)
         }
     }
     
-    func registerToken(activity: Activity<MyFoodAttributes>) {
-        Task {
-            for await data in activity.pushTokenUpdates {
-                let token = data.map { String(format: "%02x", $0) }.joined()
-                self.token = token
-            }
-        }
-        
-        Task {
-            for await stateUpdate in activity.contentStateUpdates {
-                self.stateUpdate = stateUpdate
-            }
-        }
-    }
+//    func registerToken(activity: Activity<MyFoodAttributes>) {
+//        Task {
+//            for await data in activity.pushTokenUpdates {
+//                let token = data.map { String(format: "%02x", $0) }.joined()
+//                self.token = token
+//            }
+//        }
+//        
+//        Task {
+//            for await stateUpdate in activity.contentStateUpdates {
+//                self.stateUpdate = stateUpdate
+//            }
+//        }
+//    }
     
     func update() async {
         if progress < 1 {
@@ -96,11 +105,11 @@ class ViewModel: ObservableObject {
         }
         
         let updatedDeliveryStatus = MyFoodAttributes.ContentState(process: "Your food is being cooked.", estimatedDeliveryTime: Date().addingTimeInterval(60 * 60), progress: progress)
-        await deliveryActivity?.update(using: updatedDeliveryStatus)
+        await deliveryActivity?.update(ActivityContent(state: updatedDeliveryStatus, staleDate: nil))
     }
     
     func end() async {
-        await deliveryActivity?.end(using: nil)
+        await deliveryActivity?.end(nil)
     }
     
     func copyTokenToClipboard() {
